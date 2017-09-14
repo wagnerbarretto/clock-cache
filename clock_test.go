@@ -9,7 +9,7 @@ import (
 
 // Ensure the cache can store new entries
 func TestPut(t *testing.T) {
-	c := gomemc3.New(0, nil)
+	c := gomemc3.New(10, 1, nil)
 	for i := 0; i < 10; i++ {
 		c.Put(i, string(i))
 	}
@@ -40,7 +40,7 @@ func TestPut(t *testing.T) {
 
 // Ensure the cache can delete entries
 func TestDelete(t *testing.T) {
-	c := gomemc3.New(0, nil)
+	c := gomemc3.New(10, 1, nil)
 	for i := 0; i < 10; i++ {
 		c.Put(i, string(i))
 	}
@@ -55,43 +55,25 @@ func TestDelete(t *testing.T) {
 // Ensure evictions correctness with a few full clock cycles
 func TestEviction(t *testing.T) {
 	// put 5 items in a cache with maxEntries = 3
-	c := gomemc3.New(3, nil)
-	for i := 0; i < 5; i++ {
+	c := gomemc3.New(3, 1, nil)
+	for i := 0; i < 4; i++ {
 		c.Put(i, i)
 	}
 
 	if _, ok := c.Get(0); ok {
 		t.Error("Key 0 should have been evicted")
 	}
-	if _, ok := c.Get(1); ok {
-		t.Error("Key 1 should have been evicted")
-	}
 
-	// access key 2 so it is not the next victim
-	c.Get(2)
+	// access key 1 so it is not the next victim
+	c.Get(1)
 
-	c.Put(5, 5)
-	if _, ok := c.Get(3); ok {
-		t.Error("Key 3 should have been evicted")
-	}
-	// key 2 must still be on th cache
-	if _, ok := c.Get(2); !ok {
-		t.Error("Key 2 should not have been evicted")
-	}
-
-	for i := 6; i < 9; i++ {
-		c.Put(i, i)
-	}
-
-	// key 6 must have been evicted since key 2 has R = true
-	if _, ok := c.Get(6); ok {
-		t.Error("Key 6 should have been evicted")
-	}
-
-	// with the next Put, key 2 should finally be evicted
-	c.Put(9, 9)
+	c.Put(4, 4)
 	if _, ok := c.Get(2); ok {
 		t.Error("Key 2 should have been evicted")
+	}
+	// key 1 must still be on th cache
+	if _, ok := c.Get(1); !ok {
+		t.Error("Key 1 should not have been evicted")
 	}
 }
 
@@ -101,7 +83,7 @@ func TestOnEvict(t *testing.T) {
 	onEvict := func(k, v interface{}) {
 		ch <- k.(int)
 	}
-	c := gomemc3.New(5, onEvict)
+	c := gomemc3.New(5, 1, onEvict)
 
 	for i := 0; i < 10; i++ {
 		c.Put(i, i)
@@ -122,7 +104,7 @@ func TestOnEvict(t *testing.T) {
 
 // Ensure the cache behave correctly under concurrent access
 func TestConcurrency(t *testing.T) {
-	c := gomemc3.New(100, nil)
+	c := gomemc3.New(100, 1, nil)
 	var wg sync.WaitGroup
 
 	for i := 0; i < 100; i++ {
@@ -172,28 +154,44 @@ func BenchmarkMapSet(b *testing.B) {
 }
 
 func BenchmarkPutTenth(b *testing.B) {
-	c := gomemc3.New(b.N/10, nil)
+	size := uint(b.N / 10)
+	if size < 1 {
+		size++
+	}
+	c := gomemc3.New(size, 1, nil)
 	for i := 0; i < b.N; i++ {
 		c.Put(i, i)
 	}
 }
 
 func BenchmarkPutQuarter(b *testing.B) {
-	c := gomemc3.New(b.N/4, nil)
+	size := uint(b.N / 4)
+	if size < 1 {
+		size++
+	}
+	c := gomemc3.New(size, 1, nil)
 	for i := 0; i < b.N; i++ {
 		c.Put(i, i)
 	}
 }
 
 func BenchmarkPutHalf(b *testing.B) {
-	c := gomemc3.New(b.N/2, nil)
+	size := uint(b.N / 2)
+	if size < 1 {
+		size++
+	}
+	c := gomemc3.New(size, 1, nil)
 	for i := 0; i < b.N; i++ {
 		c.Put(i, i)
 	}
 }
 
 func BenchmarkPutNoEviction(b *testing.B) {
-	c := gomemc3.New(b.N, nil)
+	size := uint(b.N / 2)
+	if size < 1 {
+		size++
+	}
+	c := gomemc3.New(size, 1, nil)
 	for i := 0; i < b.N; i++ {
 		c.Put(i, i)
 	}
@@ -217,8 +215,12 @@ func BenchmarkMapGet(b *testing.B) {
 
 func BenchmarkGet(b *testing.B) {
 	b.StopTimer()
-	c := gomemc3.New(b.N/2, nil)
-	for i := 0; i < b.N; i++ {
+	size := uint(b.N / 2)
+	if size < 1 {
+		size++
+	}
+	c := gomemc3.New(size, 1, nil)
+	for i := uint(0); i < size; i++ {
 		c.Put(i, i)
 	}
 
