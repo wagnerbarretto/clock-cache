@@ -1,15 +1,15 @@
-package gomemc3_test
+package clock_test
 
 import (
 	"sync"
 	"testing"
 
-	"github.com/wagnerbarretto/gomemc3"
+	clock "github.com/wagnerbarretto/clock-cache"
 )
 
 // Ensure the cache can store new entries
 func TestPut(t *testing.T) {
-	c := gomemc3.New(10, 1, nil)
+	c := clock.New(10)
 	for i := 0; i < 10; i++ {
 		c.Put(i, string(i))
 	}
@@ -40,7 +40,7 @@ func TestPut(t *testing.T) {
 
 // Ensure the cache can delete entries
 func TestDelete(t *testing.T) {
-	c := gomemc3.New(10, 1, nil)
+	c := clock.New(10)
 	for i := 0; i < 10; i++ {
 		c.Put(i, string(i))
 	}
@@ -55,7 +55,7 @@ func TestDelete(t *testing.T) {
 // Ensure evictions correctness with a few full clock cycles
 func TestEviction(t *testing.T) {
 	// put 5 items in a cache with maxEntries = 3
-	c := gomemc3.New(3, 1, nil)
+	c := clock.New(3)
 	for i := 0; i < 4; i++ {
 		c.Put(i, i)
 	}
@@ -83,7 +83,7 @@ func TestOnEvict(t *testing.T) {
 	onEvict := func(k, v interface{}) {
 		ch <- k.(int)
 	}
-	c := gomemc3.New(5, 1, onEvict)
+	c := clock.New(5, clock.OnEvict(onEvict))
 
 	for i := 0; i < 10; i++ {
 		c.Put(i, i)
@@ -104,7 +104,7 @@ func TestOnEvict(t *testing.T) {
 
 // Ensure the cache behave correctly under concurrent access
 func TestConcurrency(t *testing.T) {
-	c := gomemc3.New(100, 1, nil)
+	c := clock.New(100)
 	var wg sync.WaitGroup
 
 	for i := 0; i < 100; i++ {
@@ -158,7 +158,7 @@ func BenchmarkPutTenth(b *testing.B) {
 	if size < 1 {
 		size++
 	}
-	c := gomemc3.New(size, 1, nil)
+	c := clock.New(size)
 	for i := 0; i < b.N; i++ {
 		c.Put(i, i)
 	}
@@ -169,7 +169,7 @@ func BenchmarkPutQuarter(b *testing.B) {
 	if size < 1 {
 		size++
 	}
-	c := gomemc3.New(size, 1, nil)
+	c := clock.New(size)
 	for i := 0; i < b.N; i++ {
 		c.Put(i, i)
 	}
@@ -180,7 +180,7 @@ func BenchmarkPutHalf(b *testing.B) {
 	if size < 1 {
 		size++
 	}
-	c := gomemc3.New(size, 1, nil)
+	c := clock.New(size)
 	for i := 0; i < b.N; i++ {
 		c.Put(i, i)
 	}
@@ -191,7 +191,7 @@ func BenchmarkPutNoEviction(b *testing.B) {
 	if size < 1 {
 		size++
 	}
-	c := gomemc3.New(size, 1, nil)
+	c := clock.New(size)
 	for i := 0; i < b.N; i++ {
 		c.Put(i, i)
 	}
@@ -219,7 +219,7 @@ func BenchmarkGet(b *testing.B) {
 	if size < 1 {
 		size++
 	}
-	c := gomemc3.New(size, 1, nil)
+	c := clock.New(size)
 	for i := uint(0); i < size; i++ {
 		c.Put(i, i)
 	}
